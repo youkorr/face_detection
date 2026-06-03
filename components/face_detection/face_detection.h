@@ -49,6 +49,10 @@ class FaceDetectionComponent : public Component {
   void set_draw_enabled(bool enabled) { this->draw_enabled_ = enabled; }
   void set_sdcard_model_path(const char *path) { this->sdcard_model_path_ = path; }
 
+  // Enable/disable the whole detection pipeline at runtime (controlled by switch)
+  void set_enabled(bool enabled);
+  bool is_enabled() const { return this->enabled_; }
+
   // Get canvas ID for LVGL integration
   const std::string &get_canvas_id() { return this->canvas_id_; }
 
@@ -87,6 +91,7 @@ class FaceDetectionComponent : public Component {
   esp_cam_sensor::MipiDSICamComponent *camera_{nullptr};
   std::string canvas_id_{};  // Canvas ID for LVGL integration
   bool draw_enabled_{true};  // Draw bounding boxes on image buffer
+  bool enabled_{true};       // Master enable/disable for the detection pipeline
 
   // Detection configuration
   float score_threshold_{0.3f};

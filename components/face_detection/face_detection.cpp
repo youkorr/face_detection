@@ -211,6 +211,11 @@ void FaceDetectionComponent::loop() {
     return;
   }
 
+  // Skip the whole detection pipeline when disabled (e.g. via switch)
+  if (!this->enabled_) {
+    return;
+  }
+
   this->process_frame_();
 
   // Periodic memory diagnostics (every ~500 detection cycles)
@@ -262,8 +267,38 @@ void FaceDetectionComponent::process_frame_() {
 void FaceDetectionComponent::draw_on_frame(uint8_t *img_data, uint16_t width, uint16_t height) {
   if (img_data == nullptr) return;
 
+  // Don't draw anything when detection is disabled
+  if (!this->enabled_) return;
+
   if (this->draw_enabled_) {
     this->draw_results_(img_data, width, height);
+  }
+}
+
+void FaceDetectionComponent::set_enabled(bool enabled) {
+  if (this->enabled_ == enabled) {
+    return;
+  }
+  this->enabled_ = enabled;
+  ESP_LOGI(TAG, "Face detection %s", enabled ? "ENABLED" : "DISABLED");
+
+  if (!enabled) {
+    // Clear cached results so stale bounding boxes are not drawn while disabled
+    if (this->face_results_mutex_ != nullptr &&
+        xSemaphoreTake(this->face_results_mutex_, pdMS_TO_TICKS(10)) == pdTRUE) {
+      this->cached_face_results_.clear();
+      xSemaphoreGive(this->face_results_mutex_);
+    }
+
+    // Reset recognition state (person is no longer being tracked)
+    this->last_recognition_.recognized = false;
+    this->last_recognition_.id = -1;
+    this->last_recognition_.similarity = 0.0f;
+    this->cached_recognized_name_.clear();
+    this->cached_recognized_id_ = -1;
+
+    // Restart the frame counter so detection resumes cleanly when re-enabled
+    this->frame_counter_ = 0;
   }
 }
 
@@ -524,6 +559,7 @@ void FaceDetectionComponent::draw_results_(uint8_t *img_data, uint16_t width, ui
 
 void FaceDetectionComponent::dump_config() {
   ESP_LOGCONFIG(TAG, "Face Detection:");
+  ESP_LOGCONFIG(TAG, "  Enabled: %s", this->enabled_ ? "YES" : "NO");
   ESP_LOGCONFIG(TAG, "  Score threshold: %.2f", this->score_threshold_);
   ESP_LOGCONFIG(TAG, "  NMS threshold: %.2f", this->nms_threshold_);
   ESP_LOGCONFIG(TAG, "  Detection interval: %d frames", this->detection_interval_);

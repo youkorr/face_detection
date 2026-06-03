@@ -7,6 +7,7 @@ import os
 DEPENDENCIES = ["esp_cam_sensor"]
 AUTO_LOAD = ["esp_cam_sensor"]
 
+CONF_FACE_DETECTION_ID = "face_detection_id"
 CONF_CAMERA_ID = "camera_id"
 CONF_CANVAS_ID = "canvas_id"
 CONF_MODEL_TYPE = "model_type"
