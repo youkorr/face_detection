@@ -12,6 +12,7 @@ class FaceDetectionSwitch : public switch_::Switch,
                             public Component,
                             public Parented<FaceDetectionComponent> {
  public:
+  void setup() override;
   void dump_config() override;
 
  protected:
