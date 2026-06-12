@@ -32,6 +32,28 @@ locally on the SD card.
 
 ---
 
+## Screenshots
+
+> Drop your images in a `docs/` folder at the repo root (e.g.
+> `docs/detection.jpg`) and they will render here.
+
+| Live detection | Recognition overlay |
+|---|---|
+| ![Face detection — bounding boxes and landmarks on the LVGL canvas](docs/detection.jpg) | ![Face recognition — matched name drawn over the detected face](docs/recognition.jpg) |
+
+| Enrollment | Home Assistant sensor |
+|---|---|
+| ![Enrolling a new face from the UI](docs/enrollment.jpg) | ![Enrolled-faces count exposed to Home Assistant](docs/ha_sensor.jpg) |
+
+<!--
+To add a screenshot:
+  1. mkdir docs
+  2. copy your image there, e.g. docs/detection.jpg
+  3. commit it — the links above will resolve automatically.
+-->
+
+---
+
 ## Installation
 
 Add the component through `external_components`:
