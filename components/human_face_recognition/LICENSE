@@ -1,6 +1,6 @@
 MIT License
 
-Copyright (c) 2026 youkorr
+Copyright (c) 2021 Espressif Systems (Shanghai) Co., Ltd.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -19,21 +19,3 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
-
----
-
-Third-party components
-
-This project ports Espressif's face detection / face recognition stack to
-ESPHome and bundles source from Espressif Systems (Shanghai) Co., Ltd.,
-including the `esp-dl`, `human_face_detect` and `human_face_recognition`
-components. These components are distributed under the MIT License,
-Copyright (c) 2021 Espressif Systems (Shanghai) Co., Ltd. Their original
-license texts are retained in the respective component directories under
-`components/`.
-
-This project is an external component for ESPHome. ESPHome is dual-licensed:
-its Python codebase is MIT, while its C++/runtime code (.c, .cpp, .h, .hpp,
-.tcc, .ino) is licensed under the GPLv3. The MIT terms of this component are
-GPLv3-compatible, but firmware compiled together with the ESPHome runtime is,
-as a combined work, subject to the GPLv3.
