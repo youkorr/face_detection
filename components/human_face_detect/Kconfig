@@ -18,6 +18,11 @@ menu "models: human_face_detect"
         int
         default 0 if HUMAN_FACE_DETECT_MSRMNP_S8_V1
 
+    # Consumed by human_face_detect.hpp (model_type_t). 0 = MSRMNP_S8_V1.
+    config HUMAN_FACE_DETECT_MODEL_TYPE
+        int
+        default 0
+
     choice
         prompt "model location"
         default HUMAN_FACE_DETECT_MODEL_IN_FLASH_RODATA

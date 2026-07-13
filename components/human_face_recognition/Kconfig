@@ -53,4 +53,15 @@ menu "models: human_face_recognition"
         depends on HUMAN_FACE_RECOGNITION_MODEL_IN_SDCARD
         help
             Path to models on SD card
+
+    # Aliases consumed by human_face_recognition.cpp (it uses the FEAT_* naming
+    # while this Kconfig uses the RECOGNITION_* naming).
+    config HUMAN_FACE_FEAT_MFN_S8_V1
+        bool
+        default y if HUMAN_FACE_RECOGNITION_MFN_S8_V1
+        default y
+
+    config HUMAN_FACE_FEAT_MODEL_IN_FLASH_RODATA
+        bool
+        default y if HUMAN_FACE_RECOGNITION_MODEL_IN_FLASH_RODATA
 endmenu
