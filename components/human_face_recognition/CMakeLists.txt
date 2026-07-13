@@ -20,7 +20,7 @@ endif()
 
 if(models)
     set(pack_cmd ${python} ${COMPONENT_DIR}/pack_model.py)
-    list(APPEND pack_cmd -i ${models})
+    list(APPEND pack_cmd -m ${models})
     list(APPEND pack_cmd -o ${packed_model})
     add_custom_command(
         OUTPUT ${packed_model}
