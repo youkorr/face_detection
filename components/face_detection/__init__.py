@@ -4,6 +4,8 @@ from esphome.const import CONF_ID
 from esphome import automation
 import os
 
+from esphome.components.esp32 import add_idf_component, add_idf_sdkconfig_option
+
 DEPENDENCIES = ["esp_cam_sensor"]
 AUTO_LOAD = ["esp_cam_sensor"]
 
@@ -113,91 +115,44 @@ async def to_code(config):
         trigger = cg.new_Pvariable(conf[CONF_ID], var)
         await automation.build_automation(trigger, [(cg.int_, "face_id"), (cg.float_, "similarity")], conf)
 
-    # Add build flags for face detection models
-    cg.add_build_flag("-DCONFIG_HUMAN_FACE_DETECT_MSRMNP_S8_V1=1")
-    cg.add_build_flag("-DCONFIG_HUMAN_FACE_DETECT_MODEL_TYPE=0")
-    cg.add_build_flag("-DCONFIG_IDF_TARGET_ESP32P4=1")
-
-    # Model location configuration
-    model_location = config.get(CONF_MODEL_LOCATION, MODEL_LOCATION_FLASH)
-
-    if model_location == MODEL_LOCATION_SDCARD:
-        # SD card mode
-        cg.add_build_flag("-DCONFIG_HUMAN_FACE_DETECT_MODEL_IN_SDCARD=1")
-        cg.add_build_flag("-DCONFIG_HUMAN_FACE_DETECT_MODEL_IN_FLASH_RODATA=0")
-        cg.add_build_flag("-DCONFIG_HUMAN_FACE_DETECT_MODEL_LOCATION=2")
-
-        # Pass SD card path to C++ component
-        if CONF_MODEL_PATH in config:
-            cg.add(var.set_sdcard_model_path(cg.RawExpression(f'"{config[CONF_MODEL_PATH]}"')))
-        else:
-            # Default SD card path
-            cg.add(var.set_sdcard_model_path(cg.RawExpression('"/sdcard"')))
-    else:
-        # Flash rodata mode (default)
-        cg.add_build_flag("-DCONFIG_HUMAN_FACE_DETECT_MODEL_IN_FLASH_RODATA=1")
-        cg.add_build_flag("-DCONFIG_HUMAN_FACE_DETECT_MODEL_IN_SDCARD=0")
-        cg.add_build_flag("-DCONFIG_HUMAN_FACE_DETECT_MODEL_LOCATION=0")
-
-    # Add build flags for face recognition if enabled
-    if config[CONF_RECOGNITION_ENABLED]:
-        cg.add_build_flag("-DCONFIG_HUMAN_FACE_FEAT_MFN_S8_V1=1")
-        cg.add_build_flag("-DCONFIG_HUMAN_FACE_FEAT_MODEL_IN_FLASH_RODATA=1")
-        cg.add_build_flag("-DCONFIG_HUMAN_FACE_FEAT_MODEL_TYPE=0")
-        cg.add_build_flag("-DCONFIG_HUMAN_FACE_FEAT_MODEL_LOCATION=0")
-
-    # Add include paths
+    # ========================================================================
+    # ESP-DL + face models as ESP-IDF managed components (built by IDF itself)
+    # ------------------------------------------------------------------------
+    # Previous versions bundled esp-dl / human_face_detect / human_face_recognition
+    # as sibling source trees and compiled a curated subset through a PlatformIO
+    # extra_script. Recent ESPHome only copies the requested component's own files
+    # into the build tree, so those sibling trees (and the -I / relative includes
+    # pointing at them) no longer resolve. We now register them as local ESP-IDF
+    # components so IDF compiles them correctly (right per-target sources, esp-dsp,
+    # mbedtls) and exposes their headers on the include path. The models are
+    # embedded by those components themselves via Kconfig (see below).
+    # ========================================================================
     component_dir = os.path.dirname(__file__)
     parent_components_dir = os.path.dirname(component_dir)
 
-    # Add human_face_detect include path
-    human_face_detect_dir = os.path.join(parent_components_dir, "human_face_detect")
-    if os.path.exists(human_face_detect_dir):
-        cg.add_build_flag(f"-I{human_face_detect_dir}")
-
-    # Add human_face_recognition include path
-    human_face_recognition_dir = os.path.join(parent_components_dir, "human_face_recognition")
-    if os.path.exists(human_face_recognition_dir):
-        cg.add_build_flag(f"-I{human_face_recognition_dir}")
-
-    # Add ESP-DL include paths
     esp_dl_dir = os.path.join(parent_components_dir, "esp-dl")
-    if os.path.exists(esp_dl_dir):
-        esp_dl_includes = [
-            "dl",
-            "dl/tool/include",
-            "dl/tool/isa/esp32p4",
-            "dl/tool/src",
-            "dl/tensor/include",
-            "dl/tensor/src",
-            "dl/base",
-            "dl/base/isa",
-            "dl/base/isa/esp32p4",
-            "dl/math/include",
-            "dl/math/src",
-            "dl/model/include",
-            "dl/model/src",
-            "dl/module/include",
-            "dl/module/src",
-            "fbs_loader/include",
-            "fbs_loader/lib/esp32p4",
-            "fbs_loader/src",
-            "vision/detect",
-            "vision/image",
-            "vision/image/isa",
-            "vision/image/isa/esp32p4",
-            "vision/recognition",
-            "vision/classification",
-        ]
-        for inc in esp_dl_includes:
-            inc_path = os.path.join(esp_dl_dir, inc)
-            if os.path.exists(inc_path):
-                cg.add_build_flag(f"-I{inc_path}")
+    human_face_detect_dir = os.path.join(parent_components_dir, "human_face_detect")
+    human_face_recognition_dir = os.path.join(parent_components_dir, "human_face_recognition")
 
-    # Add build script for compiling ESP-DL sources and embedding models
-    build_script_path = os.path.join(component_dir, "face_detection_build.py")
-    if os.path.exists(build_script_path):
-        cg.add_platformio_option("extra_scripts", [f"post:{build_script_path}"])
+    # esp-dl is always needed (dl_image.hpp etc.). Namespaced name so it satisfies
+    # the `espressif/esp-dl` dependency declared by the model components, while the
+    # local `path` overrides the registry download (exact bundled version).
+    add_idf_component(name="espressif/esp-dl", path=esp_dl_dir)
+
+    if model_type == MODEL_TYPE_FACE:
+        add_idf_component(name="espressif/human_face_detect", path=human_face_detect_dir)
+        add_idf_component(name="espressif/human_face_recognition", path=human_face_recognition_dir)
+
+        # Model storage location -> the model components' Kconfig options.
+        model_location = config.get(CONF_MODEL_LOCATION, MODEL_LOCATION_FLASH)
+        if model_location == MODEL_LOCATION_SDCARD:
+            add_idf_sdkconfig_option("CONFIG_HUMAN_FACE_DETECT_MODEL_IN_SDCARD", True)
+            add_idf_sdkconfig_option("CONFIG_HUMAN_FACE_RECOGNITION_MODEL_IN_SDCARD", True)
+            sd_path = config.get(CONF_MODEL_PATH, "/sdcard")
+            cg.add(var.set_sdcard_model_path(cg.RawExpression(f'"{sd_path}"')))
+        else:
+            add_idf_sdkconfig_option("CONFIG_HUMAN_FACE_DETECT_MODEL_IN_FLASH_RODATA", True)
+            add_idf_sdkconfig_option("CONFIG_HUMAN_FACE_RECOGNITION_MODEL_IN_FLASH_RODATA", True)
 
 
 # Action schemas
