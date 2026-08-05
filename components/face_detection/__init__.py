@@ -47,8 +47,8 @@ SetFaceNameAction = face_detection_ns.class_("SetFaceNameAction", automation.Act
 DeleteFaceAction = face_detection_ns.class_("DeleteFaceAction", automation.Action)
 ClearAllFacesAction = face_detection_ns.class_("ClearAllFacesAction", automation.Action)
 
-esp_cam_sensor_ns = cg.esphome_ns.namespace("esp_video_camera")
-MipiDsiCam = esp_cam_sensor_ns.class_("MipiDSICamComponent", cg.Component)
+esp_video_camera_ns = cg.esphome_ns.namespace("esp_video_camera")
+MipiDsiCam = esp_video_camera_ns.class_("MipiDSICamComponent", cg.Component)
 
 CONFIG_SCHEMA = cv.Schema({
     cv.GenerateID(): cv.declare_id(FaceDetectionComponent),
