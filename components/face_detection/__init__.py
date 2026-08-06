@@ -7,7 +7,7 @@ import os
 from esphome.components.esp32 import add_idf_component, add_idf_sdkconfig_option
 
 DEPENDENCIES = ["esp_cam_sensor"]
-AUTO_LOAD = ["esp_video_camera"]
+AUTO_LOAD = ["esp_cam_sensor"]
 
 CONF_CAMERA_ID = "camera_id"
 CONF_CANVAS_ID = "canvas_id"
@@ -47,7 +47,7 @@ SetFaceNameAction = face_detection_ns.class_("SetFaceNameAction", automation.Act
 DeleteFaceAction = face_detection_ns.class_("DeleteFaceAction", automation.Action)
 ClearAllFacesAction = face_detection_ns.class_("ClearAllFacesAction", automation.Action)
 
-esp_video_camera_ns = cg.esphome_ns.namespace("esp_video_camera")
+esp_cam_sensor_ns = cg.esphome_ns.namespace("esp_cam_sensor")
 MipiDsiCam = esp_cam_sensor_ns.class_("MipiDSICamComponent", cg.Component)
 
 CONFIG_SCHEMA = cv.Schema({
