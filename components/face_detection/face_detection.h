@@ -38,7 +38,7 @@ class FaceDetectionComponent : public Component {
   void dump_config() override;
 
   // Configuration setters
-  void set_camera(esp_video_camera::MipiDSICamComponent *camera) { this->camera_ = camera; }
+  void set_camera(esp_cam_sensor::MipiDSICamComponent *camera) { this->camera_ = camera; }
   void set_canvas_id(const std::string &canvas_id) { this->canvas_id_ = canvas_id; }
   void set_score_threshold(float threshold) { this->score_threshold_ = threshold; }
   void set_nms_threshold(float threshold) { this->nms_threshold_ = threshold; }
@@ -84,7 +84,7 @@ class FaceDetectionComponent : public Component {
   float get_setup_priority() const override { return -200.0f; }  // Setup after SD card (very low priority)
 
  protected:
-  esp_video_camera::MipiDSICamComponent *camera_{nullptr};
+  esp_cam_sensor::MipiDSICamComponent *camera_{nullptr};
   std::string canvas_id_{};  // Canvas ID for LVGL integration
   bool draw_enabled_{true};  // Draw bounding boxes on image buffer
 
