@@ -11,8 +11,6 @@ set(src_dirs        ./dl/tool/src
                     ./vision/image
                     ./vision/recognition
                     ./vision/classification
-                    ./audio/common
-                    ./audio/speech_features
                     )
 
 set(include_dirs    ./dl
@@ -29,8 +27,6 @@ set(include_dirs    ./dl
                     ./vision/image/isa
                     ./vision/recognition
                     ./vision/classification
-                    ./audio/common
-                    ./audio/speech_features
                     )
 
 if(CONFIG_IDF_TARGET_ESP32)
