@@ -34,6 +34,8 @@ CONF_ON_FACE_DETECTED = "on_face_detected"
 CONF_ON_FACE_RECOGNIZED = "on_face_recognized"
 CONF_DETECTION_INTERVAL = "detection_interval"
 CONF_DRAW_ENABLED = "draw_enabled"
+CONF_DRAW_LABELS = "draw_labels"
+CONF_UNKNOWN_LABEL = "unknown_label"
 CONF_MODEL_LOCATION = "model_location"
 CONF_MODEL_PATH = "model_path"
 CONF_FACE_ID = "face_id"
@@ -160,6 +162,11 @@ CONFIG_SCHEMA = cv.All(
                 min=1, max=600
             ),
             cv.Optional(CONF_DRAW_ENABLED, default=True): cv.boolean,
+            # A label in each box: the name of a recognized face, this for the
+            # others. The font has capitals, digits and - . ' only; accented
+            # letters are drawn plain.
+            cv.Optional(CONF_DRAW_LABELS, default=True): cv.boolean,
+            cv.Optional(CONF_UNKNOWN_LABEL, default="Personne"): cv.string,
             cv.Optional(CONF_RECOGNITION_ENABLED, default=False): cv.boolean,
             cv.Optional(CONF_FACE_DB_PATH, default="/sdcard/faces.db"): cv.string,
             cv.Optional(CONF_RECOGNITION_THRESHOLD, default=0.7): cv.float_range(
@@ -241,6 +248,8 @@ async def to_code(config):
     cg.add(var.set_nms_threshold(config[CONF_NMS_THRESHOLD]))
     cg.add(var.set_detection_interval(config[CONF_DETECTION_INTERVAL]))
     cg.add(var.set_draw_enabled(config[CONF_DRAW_ENABLED]))
+    cg.add(var.set_draw_labels(config[CONF_DRAW_LABELS]))
+    cg.add(var.set_unknown_label(config[CONF_UNKNOWN_LABEL]))
 
     recognition = config[CONF_RECOGNITION_ENABLED]
     if recognition:

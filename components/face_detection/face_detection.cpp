@@ -60,6 +60,7 @@ static constexpr uint16_t COLOR_GREEN = 0x07E0;
 static constexpr uint16_t COLOR_BLUE = 0x001F;
 static constexpr uint16_t COLOR_RED = 0xF800;
 static constexpr uint16_t COLOR_WHITE = 0xFFFF;
+static constexpr uint16_t COLOR_BLACK = 0x0000;
 
 static const char *const MODEL_NAMES[] = {"msrmnp_s8_v1", "espdet_pico_224_224_face", "espdet_pico_416_416_face"};
 
@@ -211,6 +212,9 @@ const uint8_t FONT_5X7[][7] = {
     {0x1F, 0x01, 0x02, 0x04, 0x08, 0x08, 0x08},  // 7
     {0x0E, 0x11, 0x11, 0x0E, 0x11, 0x11, 0x0E},  // 8
     {0x0E, 0x11, 0x11, 0x0F, 0x01, 0x02, 0x0C},  // 9
+    {0x00, 0x00, 0x00, 0x1F, 0x00, 0x00, 0x00},  // -
+    {0x00, 0x00, 0x00, 0x00, 0x00, 0x0C, 0x0C},  // .
+    {0x04, 0x04, 0x08, 0x00, 0x00, 0x00, 0x00},  // '
 };
 
 int glyph_index(char c) {
@@ -220,8 +224,48 @@ int glyph_index(char c) {
     return c - 'a';
   if (c >= '0' && c <= '9')
     return 26 + (c - '0');
+  if (c == '-')
+    return 36;
+  if (c == '.')
+    return 37;
+  if (c == '\'')
+    return 38;
   return -1;  // a space, or anything the font does not have: left blank
 }
+
+/// A name as the 5x7 font can draw it. The font has no accents, and a name
+/// typed in French is full of them: each UTF-8 letter of Latin-1 is drawn as
+/// its plain letter, so "Hélène" reads HELENE rather than H L NE. Anything
+/// else outside ASCII is dropped.
+std::string fold_for_font(const std::string &text) {
+  // U+00C0 to U+00FF, as the letter each one is drawn as ('\0': dropped).
+  static const char LATIN1[] = "AAAAAAACEEEEIIII"   // C0-CF
+                               "DNOOOOO\0OUUUUY\0\0"  // D0-DF
+                               "AAAAAAACEEEEIIII"   // E0-EF
+                               "DNOOOOO\0OUUUUY\0Y";   // F0-FF
+  std::string out;
+  out.reserve(text.size());
+  for (size_t i = 0; i < text.size(); i++) {
+    const auto c = (uint8_t) text[i];
+    if (c < 0x80) {
+      out += (char) c;
+    } else if ((c == 0xC3) && i + 1 < text.size() && ((uint8_t) text[i + 1] & 0xC0) == 0x80) {
+      const char plain = LATIN1[(uint8_t) text[i + 1] - 0x80];
+      if (plain != '\0')
+        out += plain;
+      i++;
+    } else if ((c == 0xC5) && i + 1 < text.size() && ((uint8_t) text[i + 1] == 0x92 || (uint8_t) text[i + 1] == 0x93)) {
+      out += "OE";  // Œ, œ
+      i++;
+    }
+    // Any other byte above 0x7F is part of a character the font cannot draw.
+  }
+  return out;
+}
+
+/// The width in pixels of `text` drawn at `scale`, the last column of
+/// spacing left out.
+int text_width(const std::string &text, int scale) { return text.empty() ? 0 : (int) text.size() * 6 * scale - scale; }
 
 /// A filled rectangle, clipped to the frame. Rows are `stride` bytes apart.
 void fill_rect(uint8_t *pixels, uint32_t width, uint32_t height, uint32_t stride, int x1, int y1, int x2, int y2,
@@ -251,6 +295,10 @@ void frame_rect(uint8_t *pixels, uint32_t width, uint32_t height, uint32_t strid
 // ===========================================================================
 // Setup
 // ===========================================================================
+void FaceDetectionComponent::set_unknown_label(const std::string &label) {
+  this->unknown_label_ = fold_for_font(label);
+}
+
 #ifdef USE_FACE_DETECTION_ESP_VIDEO_CAMERA
 void FaceDetectionComponent::set_camera(esp_video_camera::ESPVideoCamera *camera) {
   this->camera_ = camera;
@@ -302,9 +350,10 @@ void FaceDetectionComponent::dump_config() {
                 "  Score threshold: %.2f\n"
                 "  NMS threshold: %.2f\n"
                 "  Detection: one frame in %u, at most %u px on the long side\n"
-                "  Draw boxes: %s",
+                "  Draw boxes: %s, labels: %s (unknown face: '%s')",
                 this->score_threshold_, this->nms_threshold_, (unsigned) this->detection_interval_,
-                (unsigned) JOB_LONG_SIDE, YESNO(this->draw_enabled_));
+                (unsigned) JOB_LONG_SIDE, YESNO(this->draw_enabled_), YESNO(this->draw_labels_),
+                this->unknown_label_.c_str());
 #ifdef USE_FACE_DETECTION_RECOGNITION
   ESP_LOGCONFIG(TAG,
                 "  Recognition: YES (Espressif human_face_recognition)\n"
@@ -814,8 +863,8 @@ bool FaceDetectionComponent::draw_results_(uint8_t *pixels, uint32_t width, uint
   for (size_t i = 0; i < this->drawn_boxes_.size(); i++) {
     const FaceBox &box = this->drawn_boxes_[i];
     const bool named = recognition.recognized && i == largest;
-    frame_rect(pixels, width, height, stride, box.x1, box.y1, box.x2, box.y2, named ? thickness + 1 : thickness,
-               named ? COLOR_BLUE : COLOR_GREEN);
+    const uint16_t color = named ? COLOR_BLUE : COLOR_GREEN;
+    frame_rect(pixels, width, height, stride, box.x1, box.y1, box.x2, box.y2, named ? thickness + 1 : thickness, color);
     if (box.has_keypoints) {
       for (int k = 0; k < 5; k++) {
         const int kx = box.keypoints[k * 2];
@@ -824,16 +873,31 @@ bool FaceDetectionComponent::draw_results_(uint8_t *pixels, uint32_t width, uint
                   COLOR_RED);
       }
     }
+    if (!this->draw_labels_)
+      continue;
+    const std::string *label = &this->unknown_label_;
     if (named) {
       if (this->drawn_name_id_ != recognition.id) {
-        this->drawn_name_ = this->get_face_name(recognition.id);
-        if (this->drawn_name_.empty())
-          this->drawn_name_ = "ID " + std::to_string(recognition.id);
+        std::string name = this->get_face_name(recognition.id);
+        if (name.empty())
+          name = "ID " + std::to_string(recognition.id);
+        this->drawn_name_ = fold_for_font(name);
         this->drawn_name_id_ = recognition.id;
       }
-      const int text_y = std::max(0, box.y1 - 9 * text_scale);
-      this->draw_text_(pixels, width, height, stride, box.x1, text_y, this->drawn_name_, COLOR_WHITE, text_scale);
+      label = &this->drawn_name_;
     }
+    if (label->empty())
+      continue;
+    // The label sits in a band of the box's own colour across the top of the
+    // box, inside it, so it reads against any background: white on the
+    // recognized blue, black on the detected green. A face at the top of the
+    // picture keeps its label, which above the box would be off the frame.
+    const int pad = text_scale;
+    const int band_w = text_width(*label, text_scale) + 2 * pad;
+    const int band_h = 7 * text_scale + 2 * pad;
+    fill_rect(pixels, width, height, stride, box.x1, box.y1, box.x1 + band_w, box.y1 + band_h, color);
+    this->draw_text_(pixels, width, height, stride, box.x1 + pad, box.y1 + pad, *label,
+                     named ? COLOR_WHITE : COLOR_BLACK, text_scale);
   }
   return true;
 }

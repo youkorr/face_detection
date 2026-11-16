@@ -89,6 +89,10 @@ class FaceDetectionComponent : public Component
   void set_nms_threshold(float threshold) { this->nms_threshold_ = threshold; }
   void set_detection_interval(int interval) { this->detection_interval_ = interval < 1 ? 1 : interval; }
   void set_draw_enabled(bool enabled) { this->draw_enabled_ = enabled; }
+  void set_draw_labels(bool enabled) { this->draw_labels_ = enabled; }
+  /// The label of a face nobody has been recognized in. Set in the .cpp, where
+  /// it is folded to what the 5x7 font can draw.
+  void set_unknown_label(const std::string &label);
   void set_face_db_path(const std::string &path) { this->face_db_path_ = path; }
   void set_recognition_threshold(float threshold) { this->recognition_threshold_ = threshold; }
 
@@ -168,6 +172,8 @@ class FaceDetectionComponent : public Component
   std::string model_dir_{};
   std::string canvas_id_{};
   bool draw_enabled_{true};
+  bool draw_labels_{true};
+  std::string unknown_label_{"Personne"};
   float score_threshold_{0.3f};
   float nms_threshold_{0.5f};
   uint32_t detection_interval_{8};

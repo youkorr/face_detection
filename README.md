@@ -106,6 +106,8 @@ face_detection:
 | `nms_threshold` | float (0–1) | `0.5` | Non-max-suppression IoU threshold (overlapping-box merge). |
 | `detection_interval` | int (1–600) | `8` | Offer one camera frame in N to the detector. A frame is only handed over when the previous detection has finished, so a slow one skips frames rather than queueing them. |
 | `draw_enabled` | bool | `true` | Draw bounding boxes / names into the camera frames. |
+| `draw_labels` | bool | `true` | A label in a band of the box's colour across the top of each box: the name of a recognized face (white on blue), `unknown_label` for the others (black on green). |
+| `unknown_label` | string | `Personne` | The label of a face nobody was recognized in. The font has capitals, digits and `- . '`; accented letters are drawn plain (É as E). |
 | `recognition_enabled` | bool | `false` | Enable the recognition stage (embeddings + database). |
 | `face_db_path` | string | `/sdcard/faces.db` | Path to the persisted face database (SD card). |
 | `recognition_threshold` | float (0–1) | `0.7` | Minimum similarity to consider a face a match. esp-dl itself returns nothing below 0.5, so values under that act as 0.5. |
