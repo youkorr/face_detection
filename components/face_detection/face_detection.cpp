@@ -23,6 +23,7 @@
 #include <cstdio>
 #include <cstring>
 #include <fstream>
+#include <list>
 
 namespace esphome::face_detection {
 
